@@ -4,22 +4,22 @@ import com.vizor.test.service.ImgManager;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 import java.util.List;
 
 public class MainFrame extends JFrame {
+    public static final int PAGE_SIZE = 13;
+    private static int CURRENT_PAGE = 0;
     private ImgManager imgManager;
     private List<List<IconLabel>> paginatedCollection;
-    private int page = 0;
 
     private JPanel footPanel;
     private JPanel bigFootPanel;
     private ImgLabel imgLabel;
     private JPanel imgListPanel;
+    private JPanel toolsPanel;
     private JPanel buttonListPanel;
+    private JTextField searchField;
 
 /*    private JMenuBar topMenuBar;
     private JMenu fileMenu;
@@ -39,7 +39,9 @@ public class MainFrame extends JFrame {
         footPanel = new JPanel();
         bigFootPanel = new JPanel();
         imgListPanel = new JPanel();
+        toolsPanel = new JPanel();
         buttonListPanel = new JPanel();
+        searchField = new JTextField(10);
 
         previousButton = new JButton("<<");
         //previousButton.setEnabled(false);
@@ -51,7 +53,7 @@ public class MainFrame extends JFrame {
         loadImageItem = new JMenuItem();*/
 
         imgManager = new ImgManager();
-        paginatedCollection = imgManager.doPaginatedCollection(13);
+        paginatedCollection = imgManager.doPaginatedCollection(PAGE_SIZE);
 
 /*        fileMenu.add(addImageItem);
         fileMenu.add(loadImageItem);*/
@@ -64,8 +66,13 @@ public class MainFrame extends JFrame {
         add(bigFootPanel, BorderLayout.SOUTH);
 
         bigFootPanel.setLayout(new BorderLayout());
-        bigFootPanel.add(buttonListPanel, BorderLayout.NORTH);
+        bigFootPanel.add(toolsPanel, BorderLayout.NORTH);
         bigFootPanel.add(footPanel, BorderLayout.SOUTH);
+
+        toolsPanel.add(new JLabel("Search: "));
+        toolsPanel.add(searchField);
+        toolsPanel.add(buttonListPanel);
+
 
         footPanel.add(previousButton, BorderLayout.WEST);
         footPanel.add(imgListPanel, BorderLayout.CENTER);
@@ -77,9 +84,9 @@ public class MainFrame extends JFrame {
         previousButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (page > 0) {
-                    page--;
-                    updatePageList(paginatedCollection.get(page));
+                if (CURRENT_PAGE > 0) {
+                    CURRENT_PAGE--;
+                    updatePageList(paginatedCollection.get(CURRENT_PAGE));
 /*                    nextButton.setEnabled(true);
                     if (page == 0) {
                         previousButton.setEnabled(false);
@@ -92,9 +99,9 @@ public class MainFrame extends JFrame {
             @Override
             public void mouseClicked(MouseEvent e) {
 
-                if (page < paginatedCollection.size() - 1) {
-                    page++;
-                    updatePageList(paginatedCollection.get(page));
+                if (CURRENT_PAGE < paginatedCollection.size() - 1) {
+                    CURRENT_PAGE++;
+                    updatePageList(paginatedCollection.get(CURRENT_PAGE));
 /*                    previousButton.setEnabled(true);
                     if (page == paginatedCollection.size() - 1) {
                         nextButton.setEnabled(false);
@@ -103,8 +110,29 @@ public class MainFrame extends JFrame {
             }
         });
 
-        updatePageList(paginatedCollection.get(page));
-        updateButtonList();
+        searchField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    List<IconLabel> iconLabels = imgManager.searchImages(searchField.getText());
+                    paginatedCollection = imgManager.doPaginatedCollection(iconLabels, PAGE_SIZE);
+                    updatePageList(paginatedCollection.get(0));
+                    updateButtonList(paginatedCollection);
+                }
+            }
+        });
+
+        searchField.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+/*                searchField.setText("");
+                updatePageList(paginatedCollection.get(page));
+                updateButtonList(paginatedCollection);*/
+            }
+        });
+
+        updatePageList(paginatedCollection.get(CURRENT_PAGE));
+        updateButtonList(paginatedCollection);
 
 /*        fileMenu.setText("File");
         addImageItem.setText("Add image");
@@ -137,11 +165,12 @@ public class MainFrame extends JFrame {
         imgListPanel.revalidate();
         //footPanel.revalidate();
         System.out.println();
-        System.out.println(page);
+        System.out.println(CURRENT_PAGE);
         System.out.println(paginatedCollection.size());
     }
 
-    private void updateButtonList() {
+    private void updateButtonList(List<List<IconLabel>> paginatedCollection) {
+        buttonListPanel.removeAll();
         Integer i = 1;
         for (List<IconLabel> iconLabels : paginatedCollection) {
             int tempPage = i - 1;
@@ -150,13 +179,13 @@ public class MainFrame extends JFrame {
                 @Override
                 public void mouseClicked(MouseEvent e) {
                     updatePageList(iconLabels);
-                    page = tempPage;
+                    CURRENT_PAGE = tempPage;
                 }
             });
             buttonListPanel.add(button);
             i++;
         }
-
+        buttonListPanel.revalidate();
     }
 
 }

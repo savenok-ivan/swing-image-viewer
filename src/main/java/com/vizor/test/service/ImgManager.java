@@ -36,8 +36,8 @@ public class ImgManager {
     }
 
 
-    public List<IconLabel> getByImgName(String name) {
-        return imageCollection.stream().filter(i -> i.getName().contains(name)).collect(Collectors.toList());
+    public List<IconLabel> searchImages(String name) {
+        return imageCollection.stream().filter(i -> i.getImgName().contains(name)).collect(Collectors.toList());
     }
 
     public void add(IconLabel imageIcon) {
@@ -53,8 +53,12 @@ public class ImgManager {
     }
 
     public List<List<IconLabel>> doPaginatedCollection(int pageSize){
+        return doPaginatedCollection(getCollection(), pageSize);
+    }
+
+    public List<List<IconLabel>> doPaginatedCollection(List<IconLabel> iconLabels, int pageSize){
         List<List<IconLabel>> list = new ArrayList<>();
-        ListUtils.doPaginated(getCollection(), pageSize, x -> {
+        ListUtils.doPaginated(iconLabels, pageSize, x -> {
             list.add(x);
         });
         return list;
