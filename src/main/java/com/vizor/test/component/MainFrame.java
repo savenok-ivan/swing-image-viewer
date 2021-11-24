@@ -3,8 +3,10 @@ package com.vizor.test.component;
 import com.vizor.test.service.ImgManager;
 
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
 import java.util.List;
 
 public class MainFrame extends JFrame {
@@ -21,10 +23,9 @@ public class MainFrame extends JFrame {
     private JPanel buttonListPanel;
     private JTextField searchField;
 
-/*    private JMenuBar topMenuBar;
+    private JMenuBar topMenuBar;
     private JMenu fileMenu;
     private JMenuItem addImageItem;
-    private JMenuItem loadImageItem;*/
 
     private JButton previousButton;
     private JButton nextButton;
@@ -35,6 +36,8 @@ public class MainFrame extends JFrame {
 
     @SuppressWarnings("unchecked")
     private void initComponents() {
+        imgManager = new ImgManager();
+
         imgLabel = ImgLabel.getInstance();
         footPanel = new JPanel();
         bigFootPanel = new JPanel();
@@ -42,24 +45,17 @@ public class MainFrame extends JFrame {
         toolsPanel = new JPanel();
         buttonListPanel = new JPanel();
         searchField = new JTextField(10);
-
         previousButton = new JButton("<<");
-        //previousButton.setEnabled(false);
         nextButton = new JButton(">>");
 
-/*        topMenuBar = new JMenuBar();
-        fileMenu = new JMenu();
-        addImageItem = new JMenuItem();
-        loadImageItem = new JMenuItem();*/
+        topMenuBar = new JMenuBar();
+        fileMenu = new JMenu("File");
+        addImageItem = new JMenuItem("Add image");
 
-        imgManager = new ImgManager();
-        paginatedCollection = imgManager.doPaginatedCollection(PAGE_SIZE);
 
-/*        fileMenu.add(addImageItem);
-        fileMenu.add(loadImageItem);*/
-
-/*        topMenuBar.add(fileMenu);
-        setJMenuBar(topMenuBar);*/
+        setJMenuBar(topMenuBar);
+        topMenuBar.add(fileMenu);
+        fileMenu.add(addImageItem);
 
 
         add(new JScrollPane(imgLabel), BorderLayout.CENTER);
@@ -78,34 +74,30 @@ public class MainFrame extends JFrame {
         footPanel.add(imgListPanel, BorderLayout.CENTER);
         footPanel.add(nextButton, BorderLayout.EAST);
 
-
         imgLabel.setHorizontalAlignment(JLabel.CENTER);
+
+
+        paginatedCollection = imgManager.doPaginatedCollection(PAGE_SIZE);
+        updatePageList(paginatedCollection.get(CURRENT_PAGE));
+        updateButtonList(paginatedCollection);
 
         previousButton.addMouseListener(new MouseAdapter() {
             @Override
-            public void mouseClicked(MouseEvent e) {
+            public void mousePressed(MouseEvent e) {
                 if (CURRENT_PAGE > 0) {
                     CURRENT_PAGE--;
                     updatePageList(paginatedCollection.get(CURRENT_PAGE));
-/*                    nextButton.setEnabled(true);
-                    if (page == 0) {
-                        previousButton.setEnabled(false);
-                    }*/
                 }
             }
         });
 
         nextButton.addMouseListener(new MouseAdapter() {
             @Override
-            public void mouseClicked(MouseEvent e) {
+            public void mousePressed(MouseEvent e) {
 
                 if (CURRENT_PAGE < paginatedCollection.size() - 1) {
                     CURRENT_PAGE++;
                     updatePageList(paginatedCollection.get(CURRENT_PAGE));
-/*                    previousButton.setEnabled(true);
-                    if (page == paginatedCollection.size() - 1) {
-                        nextButton.setEnabled(false);
-                    }*/
                 }
             }
         });
@@ -116,38 +108,33 @@ public class MainFrame extends JFrame {
                 if (e.getKeyCode() == KeyEvent.VK_ENTER) {
                     List<IconLabel> iconLabels = imgManager.searchImages(searchField.getText());
                     paginatedCollection = imgManager.doPaginatedCollection(iconLabels, PAGE_SIZE);
-                    updatePageList(paginatedCollection.get(0));
-                    updateButtonList(paginatedCollection);
+                    if (paginatedCollection.size() > 0) {
+                        updatePageList(paginatedCollection.get(0));
+                        updateButtonList(paginatedCollection);
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Image not found!");
+                        searchField.setText("");
+                    }
                 }
             }
         });
 
-        searchField.addFocusListener(new FocusAdapter() {
+
+        addImageItem.addMouseListener(new MouseAdapter() {
             @Override
-            public void focusLost(FocusEvent e) {
-/*                searchField.setText("");
-                updatePageList(paginatedCollection.get(page));
-                updateButtonList(paginatedCollection);*/
+            public void mousePressed(MouseEvent e) {
+                JFileChooser jFileChooser = new JFileChooser();
+                jFileChooser.setFileFilter(new FileNameExtensionFilter("Images", "jpg", "png", "gif", "bmp"));
+
+                if(jFileChooser.showOpenDialog(addImageItem) == JFileChooser.APPROVE_OPTION){
+                    File iFile = jFileChooser.getSelectedFile();
+                    imgManager.addImageFile(iFile);
+                    paginatedCollection = imgManager.doPaginatedCollection(PAGE_SIZE);
+                    updatePageList(paginatedCollection.get(CURRENT_PAGE));
+                    updateButtonList(paginatedCollection);
+                }
             }
         });
-
-        updatePageList(paginatedCollection.get(CURRENT_PAGE));
-        updateButtonList(paginatedCollection);
-
-/*        fileMenu.setText("File");
-        addImageItem.setText("Add image");
-        addImageItem.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-            }
-        });
-
-        loadImageItem.setText("Load image by URL");
-        loadImageItem.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-            }
-        });*/
 
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
