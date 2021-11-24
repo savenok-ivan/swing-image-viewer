@@ -20,6 +20,9 @@ public class IconLabel extends JLabel {
             @Override
             public void mouseClicked(MouseEvent e) {
                 ImgLabel.getInstance().setIcon(imageIcon);
+                ImgLabel.getInstance().setText(imgName);
+                ImgLabel.getInstance().setHorizontalTextPosition(JLabel.CENTER);
+                ImgLabel.getInstance().setVerticalTextPosition(JLabel.BOTTOM);
             }
         });
 

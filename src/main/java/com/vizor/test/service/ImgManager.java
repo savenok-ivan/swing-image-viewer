@@ -1,11 +1,13 @@
 package com.vizor.test.service;
 
 import com.vizor.test.component.IconLabel;
+import com.vizor.test.util.ListUtils;
 
 import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -48,6 +50,14 @@ public class ImgManager {
 
     public List<IconLabel> getCollection() {
         return imageCollection;
+    }
+
+    public List<List<IconLabel>> doPaginatedCollection(int pageSize){
+        List<List<IconLabel>> list = new ArrayList<>();
+        ListUtils.doPaginated(getCollection(), pageSize, x -> {
+            list.add(x);
+        });
+        return list;
     }
 
     public void sortCollection() {
