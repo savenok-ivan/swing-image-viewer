@@ -1,6 +1,6 @@
 package com.vizor.test.component;
 
-import com.vizor.test.service.ImgCollectionManager;
+import com.vizor.test.service.ImgCollectionService;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -11,22 +11,22 @@ import java.util.List;
 
 public class MainFrame extends JFrame {
     public static final int PAGE_SIZE = 13;
-    private static int CURRENT_PAGE = 0;
-    private ImgCollectionManager imgCollectionManager;
-    private List<List<IconLabel>> paginatedCollection;
+    public static int CURRENT_PAGE = 0;
+    private ImgCollectionService imgCollectionService;
+    private List<List<ImgIconLabel>> paginatedCollection;
 
     private JPanel footPanel;
-    private JPanel bigFootPanel;
-    private ImgLabel imgLabel;
-    private JPanel imgListPanel;
+    private JPanel paginationPanel;
+    private ViewImgLabel viewImgLabel;
+    private JPanel imgIconsPanel;
     private JPanel toolsPanel;
-    private JPanel buttonListPanel;
+    private JPanel pageButtonsPanel;
     private JTextField searchField;
 
     private JMenuBar topMenuBar;
     private JMenu fileMenu;
-    private JMenuItem addImageItem;
-    private JMenuItem selectRootDirectoryItem;
+    private JMenuItem addImageMenuItem;
+    private JMenuItem selectDirectoryMenuItem;
 
     private JButton previousButton;
     private JButton nextButton;
@@ -37,73 +37,84 @@ public class MainFrame extends JFrame {
 
     @SuppressWarnings("unchecked")
     private void initComponents() {
-        imgCollectionManager = ImgCollectionManager.getInstance();
+        //инициализируем сервис для работы с коллекцией картинок
+        imgCollectionService = ImgCollectionService.getInstance();
 
-        imgLabel = ImgLabel.getInstance();
-        footPanel = new JPanel();
-        bigFootPanel = new JPanel();
-        imgListPanel = new JPanel();
+        viewImgLabel = ViewImgLabel.getInstance();
+        paginationPanel = new JPanel();
+
         toolsPanel = new JPanel();
-        buttonListPanel = new JPanel();
+        footPanel = new JPanel();
+        imgIconsPanel = new JPanel();
+        pageButtonsPanel = new JPanel();
+
         searchField = new JTextField(10);
         previousButton = new JButton("<<");
         nextButton = new JButton(">>");
 
         topMenuBar = new JMenuBar();
         fileMenu = new JMenu("File");
-        addImageItem = new JMenuItem("Add image");
-        selectRootDirectoryItem = new JMenuItem("Select new root directory");
+        addImageMenuItem = new JMenuItem("Add image");
+        selectDirectoryMenuItem = new JMenuItem("Select new root directory");
 
-
+        //добавление компонентов меню
         setJMenuBar(topMenuBar);
         topMenuBar.add(fileMenu);
-        fileMenu.add(addImageItem);
-        fileMenu.add(selectRootDirectoryItem);
+        fileMenu.add(addImageMenuItem);
+        fileMenu.add(selectDirectoryMenuItem);
 
+        viewImgLabel.setHorizontalAlignment(JLabel.CENTER);
+        //добавление лейбла отображающего картинку в полном размере
+        add(new JScrollPane(viewImgLabel), BorderLayout.CENTER);
 
-        add(new JScrollPane(imgLabel), BorderLayout.CENTER);
-        add(bigFootPanel, BorderLayout.SOUTH);
+        //добавление панели компонентов навигации по колекции картинок
+        add(paginationPanel, BorderLayout.SOUTH);
+        paginationPanel.setLayout(new BorderLayout());
 
-        bigFootPanel.setLayout(new BorderLayout());
-        bigFootPanel.add(toolsPanel, BorderLayout.NORTH);
-        bigFootPanel.add(footPanel, BorderLayout.SOUTH);
-
+        //добавление панели содержащей кнопки паджинации и поле поиска
+        paginationPanel.add(toolsPanel, BorderLayout.NORTH);
         toolsPanel.add(new JLabel("Search: "));
         toolsPanel.add(searchField);
-        toolsPanel.add(buttonListPanel);
+        toolsPanel.add(pageButtonsPanel);
 
-
+        //добавление панели содержащей список картинок и кнопки назад/вперёд
+        paginationPanel.add(footPanel, BorderLayout.SOUTH);
         footPanel.add(previousButton, BorderLayout.WEST);
-        footPanel.add(imgListPanel, BorderLayout.CENTER);
+        footPanel.add(imgIconsPanel, BorderLayout.CENTER);
         footPanel.add(nextButton, BorderLayout.EAST);
 
-        imgLabel.setHorizontalAlignment(JLabel.CENTER);
+        //получаем отпадженированную коллекцию картинок
+        paginatedCollection = imgCollectionService.doPaginatedCollection(PAGE_SIZE);
+        //обновляем список иконок картинок
+        updateImgIconList(paginatedCollection.get(CURRENT_PAGE));
+        //создаём набор кнопок паджинации
+        recreatePageButtonList(paginatedCollection);
+        //обновляем состояние всех компонентов паджинации
+        updateStatePaginationComponents();
+        //добавляем листенеры к компанентам управления
+        initListeners();
 
+        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+    }
 
-        paginatedCollection = imgCollectionManager.doPaginatedCollection(PAGE_SIZE);
-        updateImageList(paginatedCollection.get(CURRENT_PAGE));
-        updatePageButtonList(paginatedCollection);
-        validateEnabledPaginationComponents();
-
+    private void initListeners(){
         previousButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
                 if (CURRENT_PAGE > 0) {
                     CURRENT_PAGE--;
-                    updateImageList(paginatedCollection.get(CURRENT_PAGE));
-                    validateEnabledPaginationComponents();
+                    updateImgIconList(paginatedCollection.get(CURRENT_PAGE));
+                    updateStatePaginationComponents();
                 }
             }
         });
-
         nextButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-
                 if (CURRENT_PAGE < paginatedCollection.size() - 1) {
                     CURRENT_PAGE++;
-                    updateImageList(paginatedCollection.get(CURRENT_PAGE));
-                    validateEnabledPaginationComponents();
+                    updateImgIconList(paginatedCollection.get(CURRENT_PAGE));
+                    updateStatePaginationComponents();
                 }
             }
         });
@@ -112,13 +123,12 @@ public class MainFrame extends JFrame {
             @Override
             public void keyPressed(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    List<IconLabel> iconLabels = imgCollectionManager.filterImageCollectionByName(searchField.getText());
-                    paginatedCollection = imgCollectionManager.doPaginatedCollection(iconLabels, PAGE_SIZE);
+                    paginatedCollection = imgCollectionService.filterCollectionByName(searchField.getText(), PAGE_SIZE);
                     if (paginatedCollection.size() > 0) {
                         CURRENT_PAGE= 0;
-                        updateImageList(paginatedCollection.get(0));
-                        updatePageButtonList(paginatedCollection);
-                        validateEnabledPaginationComponents();
+                        updateImgIconList(paginatedCollection.get(0));
+                        recreatePageButtonList(paginatedCollection);
+                        updateStatePaginationComponents();
                     } else {
                         JOptionPane.showMessageDialog(null, "Image not found!");
                         searchField.setText("");
@@ -127,81 +137,81 @@ public class MainFrame extends JFrame {
             }
         });
 
-
-        addImageItem.addMouseListener(new MouseAdapter() {
+        addImageMenuItem.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
                 JFileChooser jFileChooser = new JFileChooser();
                 jFileChooser.setFileFilter(new FileNameExtensionFilter("Images", "jpg", "png", "gif", "bmp"));
 
-                if (jFileChooser.showOpenDialog(addImageItem) == JFileChooser.APPROVE_OPTION) {
+                if (jFileChooser.showOpenDialog(addImageMenuItem) == JFileChooser.APPROVE_OPTION) {
                     File iFile = jFileChooser.getSelectedFile();
-                    imgCollectionManager.addImageFile(iFile);
-                    paginatedCollection = imgCollectionManager.doPaginatedCollection(PAGE_SIZE);
-                    updateImageList(paginatedCollection.get(CURRENT_PAGE));
-                    updatePageButtonList(paginatedCollection);
+                    imgCollectionService.addImgFile(iFile);
+                    paginatedCollection = imgCollectionService.doPaginatedCollection(PAGE_SIZE);
+                    updateImgIconList(paginatedCollection.get(CURRENT_PAGE));
+                    recreatePageButtonList(paginatedCollection);
+                    updateStatePaginationComponents();
                 }
             }
         });
 
-        selectRootDirectoryItem.addMouseListener(new MouseAdapter() {
+        selectDirectoryMenuItem.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
                 JFileChooser jFileChooser = new JFileChooser();
                 jFileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 
-                if (jFileChooser.showOpenDialog(selectRootDirectoryItem) == JFileChooser.APPROVE_OPTION) {
+                if (jFileChooser.showOpenDialog(selectDirectoryMenuItem) == JFileChooser.APPROVE_OPTION) {
                     File iFile = jFileChooser.getSelectedFile();
-                    imgCollectionManager.selectRootDirectory(iFile);
+                    imgCollectionService.selectRootDirectory(iFile);
                     CURRENT_PAGE = 0;
-                    paginatedCollection = imgCollectionManager.doPaginatedCollection(PAGE_SIZE);
-                    updateImageList(paginatedCollection.get(CURRENT_PAGE));
-                    updatePageButtonList(paginatedCollection);
+                    paginatedCollection = imgCollectionService.doPaginatedCollection(PAGE_SIZE);
+                    updateImgIconList(paginatedCollection.get(CURRENT_PAGE));
+                    recreatePageButtonList(paginatedCollection);
+                    updateStatePaginationComponents();
                 }
             }
         });
-
-        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-
     }
 
-    private void updateImageList(List<IconLabel> collection) {
-        imgListPanel.removeAll();
-
-        for (IconLabel iconLabel : collection) {
-            imgListPanel.add(iconLabel);
-            iconLabel.repaint();
+    //обновляем список иконок картинок
+    private void updateImgIconList(List<ImgIconLabel> collection) {
+        imgIconsPanel.removeAll();
+        for (ImgIconLabel imgIconLabel : collection) {
+            imgIconsPanel.add(imgIconLabel);
+            imgIconLabel.repaint();
         }
 
-        imgListPanel.revalidate();
+        imgIconsPanel.revalidate();
     }
 
-    private void updatePageButtonList(List<List<IconLabel>> paginatedCollection) {
-        buttonListPanel.removeAll();
+    //создаём/пересоздаём список кнопок паджинации
+    private void recreatePageButtonList(List<List<ImgIconLabel>> paginatedCollection) {
+        pageButtonsPanel.removeAll();
         Integer i = 1;
-        for (List<IconLabel> iconLabels : paginatedCollection) {
+        for (List<ImgIconLabel> imgIconLabels : paginatedCollection) {
             int tempPage = i - 1;
             JButton button = new JButton(i.toString());
             button.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent e) {
-                    updateImageList(iconLabels);
+                    updateImgIconList(imgIconLabels);
                     CURRENT_PAGE = tempPage;
-                    validateEnabledPaginationComponents();
+                    updateStatePaginationComponents();
                 }
             });
-            buttonListPanel.add(button);
+            pageButtonsPanel.add(button);
             i++;
         }
-        buttonListPanel.revalidate();
+        pageButtonsPanel.revalidate();
     }
 
-    private void validateEnabledPaginationComponents(){
-        validateEnabledPageButtons();
-        validateEnabledPrevAndNextButtons();
+    private void updateStatePaginationComponents(){
+        updateStatePageButtons();
+        updateStatePrevAndNextButtons();
     }
 
-    private void validateEnabledPrevAndNextButtons() {
+    // обновляем состояние доступности кнопок - назад/вперёд
+    private void updateStatePrevAndNextButtons() {
         nextButton.setEnabled(true);
         previousButton.setEnabled(true);
         if (CURRENT_PAGE == 0) {
@@ -212,8 +222,9 @@ public class MainFrame extends JFrame {
         }
     }
 
-    private void validateEnabledPageButtons() {
-        Component[] components = buttonListPanel.getComponents();
+    // обновляем состояние доступности кнопок паджинации
+    private void updateStatePageButtons() {
+        Component[] components = pageButtonsPanel.getComponents();
         for (int i = 0; i < components.length; i++) {
             if (i == CURRENT_PAGE) {
                 components[i].setEnabled(false);
