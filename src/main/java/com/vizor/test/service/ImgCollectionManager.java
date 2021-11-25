@@ -1,6 +1,7 @@
 package com.vizor.test.service;
 
 import com.vizor.test.component.IconLabel;
+import com.vizor.test.component.ImgLabel;
 import com.vizor.test.util.ListUtils;
 
 import javax.swing.*;
@@ -12,13 +13,21 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class ImgManager {
-
+public class ImgCollectionManager {
+    private static ImgCollectionManager imgCollectionManager = null;
     private File rootDirectory;
 
-    public ImgManager() {
+    private ImgCollectionManager() {
         rootDirectory = new File("assets");
         reloadCollection();
+    }
+
+    public static ImgCollectionManager getInstance() {
+        if (imgCollectionManager == null) {
+            imgCollectionManager = new ImgCollectionManager();
+            return imgCollectionManager;
+        }
+        return imgCollectionManager;
     }
 
     private List<IconLabel> imageCollection = new ArrayList<IconLabel>();
@@ -40,7 +49,7 @@ public class ImgManager {
     }
 
 
-    public List<IconLabel> searchImages(String name) {
+    public List<IconLabel> filterImageCollectionByName(String name) {
         return imageCollection.stream().filter(i -> i.getImgName().contains(name)).collect(Collectors.toList());
     }
 
@@ -63,11 +72,11 @@ public class ImgManager {
         return imageCollection;
     }
 
-    public List<List<IconLabel>> doPaginatedCollection(int pageSize){
+    public List<List<IconLabel>> doPaginatedCollection(int pageSize) {
         return doPaginatedCollection(getCollection(), pageSize);
     }
 
-    public List<List<IconLabel>> doPaginatedCollection(List<IconLabel> iconLabels, int pageSize){
+    public List<List<IconLabel>> doPaginatedCollection(List<IconLabel> iconLabels, int pageSize) {
         List<List<IconLabel>> list = new ArrayList<>();
         ListUtils.doPaginated(iconLabels, pageSize, x -> {
             list.add(x);
@@ -75,11 +84,20 @@ public class ImgManager {
         return list;
     }
 
+    public void selectRootDirectory(File directory) {
+        if (directory.isDirectory()) {
+            rootDirectory = directory;
+            reloadCollection();
+        } else {
+            JOptionPane.showMessageDialog(null, "Error defining a new root directory!");
+        }
+    }
+
     public void sortCollection() {
-        imageCollection.sort(Comparator.comparing(IconLabel::getName));
+        imageCollection.sort(Comparator.comparing(IconLabel::getImgName));
     }
 
     public void reversedCollection() {
-        imageCollection.sort(Comparator.comparing(IconLabel::getName).reversed());
+        imageCollection.sort(Comparator.comparing(IconLabel::getImgName).reversed());
     }
 }
